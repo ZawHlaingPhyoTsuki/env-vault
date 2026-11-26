@@ -62,6 +62,8 @@ meta         (key TEXT PK, value TEXT)
 5. **Runtime use:** commands decrypt values only for explicit reveal/copy/export/import-related flows. List commands return masked placeholders.
 6. **Memory:** key/value plaintext is kept only as needed; key is wrapped in `Zeroizing`.
 
+**Dev/prod isolation:** debug builds (`pnpm tauri dev`) use `app_data_dir/dev/envvault.db` and keychain service `envvault-dev`; release builds use `app_data_dir/envvault.db` and service `envvault`. This prevents dev testing from touching the installed app vault.
+
 ## Tauri commands
 
 | Command | Purpose |

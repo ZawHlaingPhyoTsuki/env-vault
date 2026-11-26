@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use crate::crypto::{self, MasterKey, KEY_LEN};
 use crate::error::{AppError, AppResult};
 
-pub const SERVICE: &str = "envvault";
+pub const SERVICE: &str = if cfg!(debug_assertions) { "envvault-dev" } else { "envvault" };
 pub const ACCOUNT: &str = "master-key";
 
 pub trait Keychain: Send + Sync {

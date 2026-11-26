@@ -52,6 +52,11 @@ pub fn run() {
                 .path()
                 .app_data_dir()
                 .map_err(|e| format!("Failed to resolve app data directory: {e}"))?;
+            let app_data_dir = if cfg!(debug_assertions) {
+                app_data_dir.join("dev")
+            } else {
+                app_data_dir
+            };
             let db_path = app_data_dir.join("envvault.db");
 
             let conn = match db::open(&db_path) {

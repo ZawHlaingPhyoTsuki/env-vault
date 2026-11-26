@@ -21,7 +21,7 @@ EnvVault is a local-first desktop app for storing `.env` values in an encrypted 
 
 ## Encryption and key handling
 
-- **Master key:** 32 random bytes generated on first launch, stored in OS keychain (service `envvault`, account `master-key`). Key material is wrapped in `zeroize` where practical.
+- **Master key:** 32 random bytes generated on first launch, stored in OS keychain (service `envvault`, account `master-key`; debug builds use `envvault-dev`). Key material is wrapped in `zeroize` where practical.
 - **Value encryption:** each value encrypted with AES-256-GCM and a fresh random 96-bit nonce. Ciphertext and nonce are stored per variable.
 - **Key lifecycle:** on startup, app loads key from OS keychain. If the key is missing/unavailable while encrypted data exists, the app shows a clear error and **does not** generate a new key.
 - **Plaintext boundary:** decrypted values are returned to frontend only for explicit reveal/copy/export/import-preview verification flows. List commands return masked placeholders.
