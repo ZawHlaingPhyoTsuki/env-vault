@@ -317,6 +317,17 @@ pub struct VariableRecord {
     pub updated_at: String,
 }
 
+pub fn list_variable_keys(conn: &Connection, environment_id: &str) -> AppResult<std::collections::HashSet<String>> {
+    ensure_environment_exists(conn, environment_id)?;
+    let mut stmt = conn.prepare("SELECT key FROM variables WHERE environment_id = ?1")?;
+    let rows = stmt.query_map(params![environment_id], |row| row.get::<_, String>(0))?;
+    let mut set = std::collections::HashSet::new();
+    for row in rows {
+        set.insert(row?);
+    }
+    Ok(set)
+}
+
 pub fn list_variable_rows(conn: &Connection, environment_id: &str) -> AppResult<Vec<VariableRow>> {
     ensure_environment_exists(conn, environment_id)?;
     let mut stmt = conn.prepare(

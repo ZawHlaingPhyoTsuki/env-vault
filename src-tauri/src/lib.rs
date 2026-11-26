@@ -47,6 +47,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_data_dir = app
                 .path()
@@ -93,6 +94,10 @@ pub fn run() {
             commands::delete_variable,
             commands::reorder_variables,
             commands::reveal_variable,
+            commands::preview_env_import,
+            commands::import_env_text,
+            commands::export_env_text,
+            commands::export_env_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

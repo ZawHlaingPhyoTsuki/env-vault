@@ -48,3 +48,19 @@ export interface RevealedValue {
   id: string;
   value: string;
 }
+
+export type ImportStatus = "new" | "will_overwrite" | "invalid";
+
+export interface ImportPreviewRow {
+  key: string | null;
+  masked_value: string;
+  status: ImportStatus;
+  line: number;
+  message: string | null;
+  comment: string | null;
+  value: string | null;
+}
+
+export interface ImportPreview {
+  rows: ImportPreviewRow[];
+}

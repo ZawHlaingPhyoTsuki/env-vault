@@ -7,7 +7,11 @@ use zeroize::Zeroizing;
 use crate::crypto::{Aes256GcmCrypto, MasterKey, ValueCrypto, KEY_LEN};
 use crate::db;
 use crate::error::{AppError, AppResult};
-use crate::models::{Environment, EnvironmentSummary, Project, ProjectSummary, RevealedValue, Variable, VariableRow};
+use crate::models::{
+    Environment, EnvironmentSummary, ImportPreview, ImportPreviewRow, ImportStatus, Project,
+    ProjectSummary, RevealedValue, Variable, VariableRow,
+};
+use crate::parser;
 
 pub struct AppState {
     pub conn: Mutex<Connection>,
@@ -205,4 +209,129 @@ pub fn reveal_variable(state: State<'_, AppState>, id: String) -> AppResult<Reve
     let value = String::from_utf8(plaintext)
         .map_err(|_| AppError::Crypto("decrypted value is not valid UTF-8".into()))?;
     Ok(RevealedValue { id: record.id, value })
+}
+
+#[tauri::command]
+pub fn preview_env_import(state: State<'_, AppState>, environment_id: String, text: String) -> AppResult<ImportPreview> {
+    let _ = state.ready_key()?;
+    let conn = state.conn()?;
+    let existing = db::list_variable_keys(&conn, &environment_id)?;
+    let parsed = parser::parse_env(&text);
+
+    let mut rows = Vec::new();
+    for v in &parsed.variables {
+        let status = if existing.contains(&v.key) { ImportStatus::WillOverwrite } else { ImportStatus::New };
+        rows.push(ImportPreviewRow {
+            key: Some(v.key.clone()),
+            masked_value: if v.value.is_empty() { String::new() } else { "••••••••".to_string() },
+            status,
+            line: v.line,
+            message: None,
+            comment: v.comment.clone(),
+            value: None,
+        });
+    }
+
+    for d in &parsed.diagnostics {
+        match d.level {
+            parser::DiagnosticLevel::Error => rows.push(ImportPreviewRow {
+                key: d.key.clone(),
+                masked_value: String::new(),
+                status: ImportStatus::Invalid,
+                line: d.line,
+                message: Some(d.message.clone()),
+                comment: None,
+                value: None,
+            }),
+            parser::DiagnosticLevel::Warning => {
+                if let Some(key) = &d.key {
+                    if let Some(row) = rows.iter_mut().find(|r| r.key.as_deref() == Some(key.as_str())) {
+                        row.message = Some(d.message.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    rows.sort_by_key(|r| r.line);
+    Ok(ImportPreview { rows })
+}
+
+#[tauri::command]
+pub fn import_env_text(state: State<'_, AppState>, environment_id: String, text: String) -> AppResult<usize> {
+    let master = state.ready_key()?;
+    let conn = state.conn()?;
+    let parsed = parser::parse_env(&text);
+    let crypto = Aes256GcmCrypto;
+
+    let tx = conn.unchecked_transaction()?;
+    let mut existing = std::collections::HashMap::new();
+    {
+        let mut stmt = tx.prepare("SELECT id, key FROM variables WHERE environment_id = ?1")?;
+        let rows = stmt.query_map(rusqlite::params![environment_id], |row| {
+            Ok((row.get::<_, String>(1)?, row.get::<_, String>(0)?))
+        })?;
+        for row in rows {
+            let (key, id) = row?;
+            existing.insert(key, id);
+        }
+    }
+
+    let mut count = 0usize;
+    for v in parsed.variables {
+        let (ciphertext, nonce) = crypto.encrypt(&master, v.value.as_bytes())?;
+        if let Some(id) = existing.get(&v.key) {
+            db::update_variable(&tx, id, &v.key, &ciphertext, &nonce, v.comment.as_deref())?;
+        } else {
+            db::create_variable(&tx, &environment_id, &v.key, &ciphertext, &nonce, v.comment.as_deref(), None)?;
+        }
+        count += 1;
+    }
+
+    tx.commit()?;
+    Ok(count)
+}
+
+#[tauri::command]
+pub fn export_env_text(state: State<'_, AppState>, environment_id: String) -> AppResult<String> {
+    let master = state.ready_key()?;
+    let conn = state.conn()?;
+    let mut stmt = conn.prepare(
+        "SELECT key, value_encrypted, nonce, comment FROM variables WHERE environment_id = ?1 ORDER BY position ASC, key COLLATE NOCASE ASC",
+    )?;
+    let rows = stmt.query_map(rusqlite::params![environment_id], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, Vec<u8>>(1)?,
+            row.get::<_, Vec<u8>>(2)?,
+            row.get::<_, Option<String>>(3)?,
+        ))
+    })?;
+    let crypto = Aes256GcmCrypto;
+    let mut vars = Vec::new();
+    for row in rows {
+        let (key, value_encrypted, nonce_bytes, comment) = row?;
+        let nonce: [u8; crate::crypto::NONCE_LEN] = nonce_bytes
+            .as_slice()
+            .try_into()
+            .map_err(|_| AppError::Crypto("invalid nonce length".into()))?;
+        let plaintext = crypto.decrypt(&master, &value_encrypted, &nonce)?;
+        let value = String::from_utf8(plaintext)
+            .map_err(|_| AppError::Crypto("decrypted value is not valid UTF-8".into()))?;
+        vars.push(parser::ExportVariable { key, value, comment });
+    }
+    Ok(parser::serialize_env(&vars))
+}
+
+#[tauri::command]
+pub fn export_env_file(state: State<'_, AppState>, environment_id: String, path: String) -> AppResult<()> {
+    let content = export_env_text(state, environment_id)?;
+    std::fs::write(&path, content).map_err(|e| AppError::InvalidState(format!("Failed to write file: {e}")))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| AppError::InvalidState(format!("Failed to set file permissions: {e}")))?;
+    }
+    Ok(())
 }

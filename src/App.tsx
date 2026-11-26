@@ -1,11 +1,17 @@
 import * as React from "react";
-import { AlertTriangle } from "lucide-react";
-import { Toaster } from "sonner";
+import { AlertTriangle, Copy, Download, Upload } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { save } from "@tauri-apps/plugin-dialog";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { toast, Toaster } from "sonner";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Button } from "@/components/ui/button";
+import { ImportDialog } from "@/components/variables/import-dialog";
 import { VariableEditor } from "@/components/variables/variable-editor";
 import { useInitStatus } from "@/hooks/use-init";
 import { useProjects } from "@/hooks/use-projects";
 import { useEnvironments } from "@/hooks/use-environments";
+import { api } from "@/lib/api";
 
 function App() {
   const init = useInitStatus();
@@ -29,6 +35,36 @@ function App() {
   const selectedProject = projects.data?.find((p) => p.id === selectedProjectId) ?? null;
   const envs = useEnvironments(selectedProjectId);
   const selectedEnvironment = envs.data?.find((e) => e.id === selectedEnvironmentId) ?? null;
+  const qc = useQueryClient();
+  const [importOpen, setImportOpen] = React.useState(false);
+
+  const copyAsEnv = async () => {
+    if (!selectedEnvironmentId) return;
+    try {
+      const text = await api.exportEnvText(selectedEnvironmentId);
+      await writeText(text);
+      toast.success("Copied .env to clipboard");
+      window.setTimeout(async () => {
+        try {
+          const current = await readText();
+          if (current === text) await writeText("");
+        } catch { /* ignore */ }
+      }, 30000);
+    } catch (e) { toast.error(String(e)); }
+  };
+
+  const exportAsEnv = async () => {
+    if (!selectedEnvironmentId || !selectedEnvironment) return;
+    try {
+      const path = await save({
+        defaultPath: `${selectedEnvironment.name}.env`,
+        filters: [{ name: "Env", extensions: ["env"] }],
+      });
+      if (!path) return;
+      await api.exportEnvFile(selectedEnvironmentId, path);
+      toast.success("Exported .env file");
+    } catch (e) { toast.error(String(e)); }
+  };
 
   React.useEffect(() => {
     if (selectedEnvironmentId && envs.data && !envs.data.some((e) => e.id === selectedEnvironmentId)) {
@@ -85,8 +121,18 @@ function App() {
               <span className="font-medium font-mono text-[12px]">{selectedEnvironment.name}</span>
             </>}
           </div>
-          <div className="font-mono text-[11px] text-muted-foreground">
-            {selectedEnvironment ? `${selectedEnvironment.variable_count} vars` : selectedProject ? `${selectedProject.environment_count} envs` : ""}
+          <div className="flex items-center gap-2">
+            {selectedEnvironment && (
+              <>
+                <span className="mr-2 font-mono text-[11px] text-muted-foreground">{selectedEnvironment.variable_count} vars</span>
+                <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}><Upload size={16} strokeWidth={1.5} /> Import</Button>
+                <Button size="sm" variant="secondary" onClick={() => void copyAsEnv()}><Copy size={16} strokeWidth={1.5} /> Copy as .env</Button>
+                <Button size="sm" variant="secondary" onClick={() => void exportAsEnv()}><Download size={16} strokeWidth={1.5} /> Export</Button>
+              </>
+            )}
+            {!selectedEnvironment && selectedProject && (
+              <span className="font-mono text-[11px] text-muted-foreground">{selectedProject.environment_count} envs</span>
+            )}
           </div>
         </header>
 
@@ -116,6 +162,18 @@ function App() {
           />
         )}
       </main>
+      {selectedEnvironmentId && (
+        <ImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          environmentId={selectedEnvironmentId}
+          onImported={() => {
+            void qc.invalidateQueries({ queryKey: ["variables", selectedEnvironmentId] });
+            void qc.invalidateQueries({ queryKey: ["environments", selectedProjectId] });
+            void qc.invalidateQueries({ queryKey: ["projects"] });
+          }}
+        />
+      )}
       <Toaster
         position="bottom-right"
         toastOptions={{

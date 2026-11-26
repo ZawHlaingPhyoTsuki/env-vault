@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   Environment,
   EnvironmentSummary,
+  ImportPreview,
   Project,
   ProjectSummary,
   RevealedValue,
@@ -58,4 +59,12 @@ export const api = {
   reorderVariables: (environmentId: string, orderedIds: string[]) =>
     invoke<void>("reorder_variables", { environmentId, orderedIds }),
   revealVariable: (id: string) => invoke<RevealedValue>("reveal_variable", { id }),
+  previewEnvImport: (environmentId: string, text: string) =>
+    invoke<ImportPreview>("preview_env_import", { environmentId, text }),
+  importEnvText: (environmentId: string, text: string) =>
+    invoke<number>("import_env_text", { environmentId, text }),
+  exportEnvText: (environmentId: string) =>
+    invoke<string>("export_env_text", { environmentId }),
+  exportEnvFile: (environmentId: string, path: string) =>
+    invoke<void>("export_env_file", { environmentId, path }),
 };

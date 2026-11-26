@@ -66,3 +66,27 @@ pub struct RevealedValue {
     pub id: String,
     pub value: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ImportStatus {
+    New,
+    WillOverwrite,
+    Invalid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportPreviewRow {
+    pub key: Option<String>,
+    pub masked_value: String,
+    pub status: ImportStatus,
+    pub line: usize,
+    pub message: Option<String>,
+    pub comment: Option<String>,
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportPreview {
+    pub rows: Vec<ImportPreviewRow>,
+}
