@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,11 +17,12 @@ interface Props {
 export function ImportDialog({ open, onOpenChange, environmentId, onImported }: Props) {
   const [text, setText] = React.useState("");
   const [rows, setRows] = React.useState<ImportPreviewRow[]>([]);
+  const [revealed, setRevealed] = React.useState<Record<number, boolean>>({});
   const [loading, setLoading] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
 
   React.useEffect(() => {
-    if (!open) { setText(""); setRows([]); }
+    if (!open) { setText(""); setRows([]); setRevealed({}); }
   }, [open]);
 
   const preview = async () => {
@@ -28,6 +30,7 @@ export function ImportDialog({ open, onOpenChange, environmentId, onImported }: 
     try {
       const res = await api.previewEnvImport(environmentId, text);
       setRows(res.rows);
+      setRevealed({});
     } catch (e) { toast.error(String(e)); }
     finally { setLoading(false); }
   };
@@ -76,24 +79,43 @@ export function ImportDialog({ open, onOpenChange, environmentId, onImported }: 
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr key={`${r.line}-${r.key ?? "err"}-${i}`} className="border-b border-border last:border-b-0">
-                    <td className="px-3 py-2 font-mono">{r.key ?? "—"}</td>
-                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.masked_value || "—"}</td>
-                    <td className="px-3 py-2">
-                      <span className={cn(
-                        "inline-flex border px-1.5 py-0.5 text-[11px] uppercase tracking-[0.04em]",
-                        r.status === "new" && "border-success/40 text-success",
-                        r.status === "will_overwrite" && "border-warning/40 text-warning",
-                        r.status === "invalid" && "border-destructive/40 text-destructive",
-                      )}>
-                        {r.status.replace(/_/g, " ")}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.line}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.message ?? ""}</td>
-                  </tr>
-                ))}
+                {rows.map((r, i) => {
+                  const isRevealed = !!revealed[i];
+                  const canReveal = r.value !== null && r.value !== "";
+                  return (
+                    <tr key={`${r.line}-${r.key ?? "err"}-${i}`} className="border-b border-border last:border-b-0">
+                      <td className="px-3 py-2 font-mono">{r.key ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span className="min-w-0 break-all">{isRevealed ? r.value : (r.masked_value || "—")}</span>
+                          {canReveal && (
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center border border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-accent-foreground"
+                              aria-label={isRevealed ? "Hide value" : "Reveal value"}
+                              title={isRevealed ? "Hide value" : "Reveal value"}
+                              onClick={() => setRevealed((s) => ({ ...s, [i]: !s[i] }))}
+                            >
+                              {isRevealed ? <EyeOff size={14} strokeWidth={1.5} /> : <Eye size={14} strokeWidth={1.5} />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className={cn(
+                          "inline-flex border px-1.5 py-0.5 text-[11px] uppercase tracking-[0.04em]",
+                          r.status === "new" && "border-success/40 text-success",
+                          r.status === "will_overwrite" && "border-warning/40 text-warning",
+                          r.status === "invalid" && "border-destructive/40 text-destructive",
+                        )}>
+                          {r.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-muted-foreground">{r.line}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.message ?? ""}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

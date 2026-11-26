@@ -228,7 +228,7 @@ pub fn preview_env_import(state: State<'_, AppState>, environment_id: String, te
             line: v.line,
             message: None,
             comment: v.comment.clone(),
-            value: None,
+            value: Some(v.value.clone()),
         });
     }
 
