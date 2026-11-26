@@ -2,6 +2,7 @@ import * as React from "react";
 import { AlertTriangle } from "lucide-react";
 import { Toaster } from "sonner";
 import { Sidebar } from "@/components/layout/sidebar";
+import { VariableEditor } from "@/components/variables/variable-editor";
 import { useInitStatus } from "@/hooks/use-init";
 import { useProjects } from "@/hooks/use-projects";
 import { useEnvironments } from "@/hooks/use-environments";
@@ -89,30 +90,31 @@ function App() {
           </div>
         </header>
 
-        <div className="flex flex-1 items-center justify-center p-6">
-          {!selectedProject ? (
+        {!selectedProject ? (
+          <div className="flex flex-1 items-center justify-center p-6">
             <EmptyState
               label="Workspace"
               title="Create a project"
               description="Projects group environments like dev, stage, and prod. Your .env data stays encrypted in the local vault."
               hint="Ctrl/Cmd+N"
             />
-          ) : !selectedEnvironment ? (
+          </div>
+        ) : !selectedEnvironment ? (
+          <div className="flex flex-1 items-center justify-center p-6">
             <EmptyState
               label="Project"
               title="Select or create an environment"
               description="Add environments inside the project, then paste .env contents into them."
               hint="Use the sidebar + action"
             />
-          ) : (
-            <EmptyState
-              label="Environment"
-              title={`${selectedEnvironment.name} is ready`}
-              description="Variable editor, masking, import, and export will be added in the next steps."
-              hint="Next: Step 6"
-            />
-          )}
-        </div>
+          </div>
+        ) : (
+          <VariableEditor
+            projectId={selectedProject.id}
+            environmentId={selectedEnvironment.id}
+            environmentName={selectedEnvironment.name}
+          />
+        )}
       </main>
       <Toaster
         position="bottom-right"
