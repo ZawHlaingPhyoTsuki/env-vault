@@ -12,8 +12,8 @@ These features are **not part of the MVP**. Do not implement them unless explici
 
 ## Suggested implementation order
 
-1. **01-global-search.md** - read-only feature, no key-handling changes, builds on existing DB/query patterns.
-2. **02-compare-environments.md** - read-only comparison over existing decrypted-on-demand flows.
-3. **03-auto-lock.md** - session/key lifecycle change; needed before stronger backup/password flows are exposed.
-4. **05-optional-master-password.md** - extends key hierarchy; design carefully before backup format depends on it.
-5. **04-encrypted-backup.md** - depends on stable data model and key hierarchy decisions.
+1. **01-global-search.md** - read-only feature over existing plaintext metadata; no key-handling changes.
+2. **02-compare-environments.md** - read-only comparison using existing decrypt-on-demand flows; builds UI patterns for masked diffs.
+3. **03-auto-lock.md** - session/key lifecycle change; establishes lock/unlock UX before password-based features.
+4. **05-optional-master-password.md** - defines key hierarchy/migration that backup/restore should align with.
+5. **04-encrypted-backup.md** - depends on stable data model and key hierarchy; benefits from lock/password decisions.
