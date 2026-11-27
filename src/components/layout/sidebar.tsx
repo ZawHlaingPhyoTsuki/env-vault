@@ -177,6 +177,15 @@ export function Sidebar({ selectedProjectId, selectedEnvironmentId, onSelectProj
           onSubmit={(e) => { e.preventDefault(); void submitName(); }}
         >
           <Input autoFocus value={nameValue} onChange={(e) => setNameValue(e.target.value)} placeholder="Name" />
+          {nameDialog?.kind === "create-environment" && (
+            <div className="flex flex-wrap gap-2">
+              {["development", "staging", "production", "local"].map((preset) => (
+                <Button key={preset} type="button" variant="secondary" size="sm" onClick={() => setNameValue(preset)}>
+                  {preset}
+                </Button>
+              ))}
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setNameDialog(null)}>Cancel</Button>
             <Button variant="primary" type="submit" disabled={!nameValue.trim() || nameBusy}>

@@ -32,12 +32,19 @@ export function VariableEditor({ projectId, environmentId, environmentName }: Pr
   const [adding, setAdding] = React.useState(false);
   const [addDraft, setAddDraft] = React.useState({ key: "", value: "", comment: "" });
   const [deleteTarget, setDeleteTarget] = React.useState<VariableRow | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     return () => {
       Object.values(revealTimers.current).forEach((t) => window.clearTimeout(t));
     };
   }, []);
+
+  React.useLayoutEffect(() => {
+    if (!adding) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [adding]);
 
   React.useEffect(() => {
     setEditingId(null);
@@ -141,7 +148,7 @@ export function VariableEditor({ projectId, environmentId, environmentName }: Pr
         <Button variant="primary" size="sm" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.5} /> Add variable</Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
         <table className="w-full border-collapse text-[13px]">
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b border-border text-left">
@@ -156,11 +163,11 @@ export function VariableEditor({ projectId, environmentId, environmentName }: Pr
               const editing = editingId === row.id;
               const isRevealed = !!revealed[row.id];
               return (
-                <tr key={row.id} className="border-b border-border align-top">
+                <tr key={row.id} className="border-b border-border align-middle">
                   <td className="px-4 py-2 font-mono text-[12px] cursor-text" onClick={() => !editing && void startEdit(row)}>{editing ? <Input value={draft.key} onChange={(e) => setDraft((d) => ({ ...d, key: e.target.value }))} /> : row.key}</td>
                   <td className="px-4 py-2 font-mono text-[12px] cursor-text" onClick={() => !editing && void startEdit(row)}>{editing ? <Input value={draft.value} onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))} /> : <span className={cn(!isRevealed && "text-muted-foreground")}>{maskValue(row)}</span>}</td>
                   <td className="px-4 py-2 text-muted-foreground cursor-text" onClick={() => !editing && void startEdit(row)}>{editing ? <Input value={draft.comment} onChange={(e) => setDraft((d) => ({ ...d, comment: e.target.value }))} /> : (row.comment ?? "")}</td>
-                  <td className="px-4 py-1.5">
+                  <td className="px-4 py-2">
                     <div className="flex items-center gap-1">
                       {editing ? (
                         <>
@@ -183,11 +190,11 @@ export function VariableEditor({ projectId, environmentId, environmentName }: Pr
               );
             })}
             {adding && (
-              <tr className="border-b border-border bg-muted/20 align-top">
+              <tr className="border-b border-border bg-muted/20 align-middle">
                 <td className="px-4 py-2"><Input autoFocus value={addDraft.key} onChange={(e) => setAddDraft((d) => ({ ...d, key: e.target.value }))} placeholder="KEY_NAME" /></td>
                 <td className="px-4 py-2"><Input value={addDraft.value} onChange={(e) => setAddDraft((d) => ({ ...d, value: e.target.value }))} placeholder="value" /></td>
                 <td className="px-4 py-2"><Input value={addDraft.comment} onChange={(e) => setAddDraft((d) => ({ ...d, comment: e.target.value }))} placeholder="comment" /></td>
-                <td className="px-4 py-1.5"><div className="flex items-center gap-1"><Button size="sm" variant="primary" onClick={() => void addVariable()} disabled={createVar.isPending}>Add</Button><Button size="sm" variant="secondary" onClick={() => setAdding(false)}>Cancel</Button></div></td>
+                <td className="px-4 py-2"><div className="flex items-center gap-1"><Button size="sm" variant="primary" onClick={() => void addVariable()} disabled={createVar.isPending}>Add</Button><Button size="sm" variant="secondary" onClick={() => setAdding(false)}>Cancel</Button></div></td>
               </tr>
             )}
           </tbody>
