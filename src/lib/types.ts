@@ -58,7 +58,6 @@ export interface ImportPreviewRow {
   line: number;
   message: string | null;
   comment: string | null;
-  value: string | null;
 }
 
 export interface ImportPreview {

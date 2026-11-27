@@ -83,7 +83,6 @@ pub struct ImportPreviewRow {
     pub line: usize,
     pub message: Option<String>,
     pub comment: Option<String>,
-    pub value: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
