@@ -1,11 +1,12 @@
 import * as React from "react";
-import { AlertTriangle, Copy, Download, Upload } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Copy, Download, Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { save } from "@tauri-apps/plugin-dialog";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast, Toaster } from "sonner";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
+import { CompareDialog } from "@/components/variables/compare-dialog";
 import { ImportDialog } from "@/components/variables/import-dialog";
 import { VariableEditor } from "@/components/variables/variable-editor";
 import { useInitStatus } from "@/hooks/use-init";
@@ -37,6 +38,7 @@ function App() {
   const selectedEnvironment = envs.data?.find((e) => e.id === selectedEnvironmentId) ?? null;
   const qc = useQueryClient();
   const [importOpen, setImportOpen] = React.useState(false);
+  const [compareOpen, setCompareOpen] = React.useState(false);
 
   const copyAsEnv = async () => {
     if (!selectedEnvironmentId) return;
@@ -125,6 +127,7 @@ function App() {
             {selectedEnvironment && (
               <>
                 <span className="mr-2 font-mono text-[11px] text-muted-foreground">{selectedEnvironment.variable_count} vars</span>
+                <Button size="sm" variant="secondary" onClick={() => setCompareOpen(true)}><ArrowLeftRight size={16} strokeWidth={1.5} /> Compare</Button>
                 <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}><Upload size={16} strokeWidth={1.5} /> Import</Button>
                 <Button size="sm" variant="secondary" onClick={() => void copyAsEnv()}><Copy size={16} strokeWidth={1.5} /> Copy as .env</Button>
                 <Button size="sm" variant="secondary" onClick={() => void exportAsEnv()}><Download size={16} strokeWidth={1.5} /> Export</Button>
@@ -163,16 +166,24 @@ function App() {
         )}
       </main>
       {selectedEnvironmentId && (
-        <ImportDialog
-          open={importOpen}
-          onOpenChange={setImportOpen}
-          environmentId={selectedEnvironmentId}
-          onImported={() => {
-            void qc.invalidateQueries({ queryKey: ["variables", selectedEnvironmentId] });
-            void qc.invalidateQueries({ queryKey: ["environments", selectedProjectId] });
-            void qc.invalidateQueries({ queryKey: ["projects"] });
-          }}
-        />
+        <>
+          <ImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            environmentId={selectedEnvironmentId}
+            onImported={() => {
+              void qc.invalidateQueries({ queryKey: ["variables", selectedEnvironmentId] });
+              void qc.invalidateQueries({ queryKey: ["environments", selectedProjectId] });
+              void qc.invalidateQueries({ queryKey: ["projects"] });
+            }}
+          />
+          <CompareDialog
+            open={compareOpen}
+            onOpenChange={setCompareOpen}
+            currentEnvironmentId={selectedEnvironmentId}
+            environments={envs.data ?? []}
+          />
+        </>
       )}
       <Toaster
         position="bottom-right"

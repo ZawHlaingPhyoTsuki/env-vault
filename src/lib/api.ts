@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Environment,
+  EnvironmentComparison,
   EnvironmentSummary,
   ImportPreview,
   Project,
@@ -67,4 +68,9 @@ export const api = {
     invoke<string>("export_env_text", { environmentId }),
   exportEnvFile: (environmentId: string, path: string) =>
     invoke<void>("export_env_file", { environmentId, path }),
+  compareEnvironments: (leftEnvironmentId: string, rightEnvironmentId: string) =>
+    invoke<EnvironmentComparison>("compare_environments", {
+      leftEnvironmentId,
+      rightEnvironmentId,
+    }),
 };

@@ -90,3 +90,29 @@ pub struct ImportPreviewRow {
 pub struct ImportPreview {
     pub rows: Vec<ImportPreviewRow>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CompareStatus {
+    OnlyLeft,
+    OnlyRight,
+    Same,
+    Different,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompareRow {
+    pub key: String,
+    pub status: CompareStatus,
+    pub left_masked: Option<String>,
+    pub right_masked: Option<String>,
+    pub left_variable_id: Option<String>,
+    pub right_variable_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentComparison {
+    pub left_environment_id: String,
+    pub right_environment_id: String,
+    pub rows: Vec<CompareRow>,
+}

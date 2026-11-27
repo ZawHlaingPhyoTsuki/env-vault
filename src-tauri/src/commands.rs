@@ -8,8 +8,8 @@ use crate::crypto::{Aes256GcmCrypto, MasterKey, ValueCrypto, KEY_LEN};
 use crate::db;
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    Environment, EnvironmentSummary, ImportPreview, ImportPreviewRow, ImportStatus, Project,
-    ProjectSummary, RevealedValue, Variable, VariableRow,
+    CompareRow, CompareStatus, Environment, EnvironmentComparison, EnvironmentSummary, ImportPreview,
+    ImportPreviewRow, ImportStatus, Project, ProjectSummary, RevealedValue, Variable, VariableRow,
 };
 use crate::parser;
 
@@ -334,4 +334,94 @@ pub fn export_env_file(state: State<'_, AppState>, environment_id: String, path:
             .map_err(|e| AppError::InvalidState(format!("Failed to set file permissions: {e}")))?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn compare_environments(
+    state: State<'_, AppState>,
+    left_environment_id: String,
+    right_environment_id: String,
+) -> AppResult<EnvironmentComparison> {
+    if left_environment_id == right_environment_id {
+        return Err(AppError::Validation(
+            "select two different environments to compare".into(),
+        ));
+    }
+    let master = state.ready_key()?;
+    let conn = state.conn()?;
+    let left = db::list_variable_records(&conn, &left_environment_id)?;
+    let right = db::list_variable_records(&conn, &right_environment_id)?;
+    let crypto = Aes256GcmCrypto;
+
+    let decrypt = |rec: &crate::db::VariableRecord| -> AppResult<Vec<u8>> {
+        let nonce: [u8; crate::crypto::NONCE_LEN] = rec
+            .nonce
+            .as_slice()
+            .try_into()
+            .map_err(|_| AppError::Crypto("invalid nonce length".into()))?;
+        crypto.decrypt(&master, &rec.value_encrypted, &nonce)
+    };
+    let mask = |rec: &crate::db::VariableRecord| -> String {
+        if rec.value_encrypted.is_empty() {
+            String::new()
+        } else {
+            "••••••••".to_string()
+        }
+    };
+
+    let mut right_map: std::collections::BTreeMap<String, &crate::db::VariableRecord> =
+        std::collections::BTreeMap::new();
+    for rec in &right {
+        right_map.insert(rec.key.clone(), rec);
+    }
+
+    let mut rows = Vec::new();
+    let mut seen_right = std::collections::HashSet::new();
+    for l in &left {
+        if let Some(r) = right_map.get(&l.key) {
+            seen_right.insert(l.key.as_str());
+            let status = if decrypt(l)? == decrypt(r)? {
+                CompareStatus::Same
+            } else {
+                CompareStatus::Different
+            };
+            rows.push(CompareRow {
+                key: l.key.clone(),
+                status,
+                left_masked: Some(mask(l)),
+                right_masked: Some(mask(r)),
+                left_variable_id: Some(l.id.clone()),
+                right_variable_id: Some(r.id.clone()),
+            });
+        } else {
+            rows.push(CompareRow {
+                key: l.key.clone(),
+                status: CompareStatus::OnlyLeft,
+                left_masked: Some(mask(l)),
+                right_masked: None,
+                left_variable_id: Some(l.id.clone()),
+                right_variable_id: None,
+            });
+        }
+    }
+    for r in &right {
+        if seen_right.contains(r.key.as_str()) {
+            continue;
+        }
+        rows.push(CompareRow {
+            key: r.key.clone(),
+            status: CompareStatus::OnlyRight,
+            left_masked: None,
+            right_masked: Some(mask(r)),
+            left_variable_id: None,
+            right_variable_id: Some(r.id.clone()),
+        });
+    }
+    rows.sort_by(|a, b| a.key.to_lowercase().cmp(&b.key.to_lowercase()).then(a.key.cmp(&b.key)));
+
+    Ok(EnvironmentComparison {
+        left_environment_id,
+        right_environment_id,
+        rows,
+    })
 }

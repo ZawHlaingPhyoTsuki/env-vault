@@ -103,6 +103,7 @@ pub fn run() {
             commands::import_env_text,
             commands::export_env_text,
             commands::export_env_file,
+            commands::compare_environments,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

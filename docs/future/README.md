@@ -5,7 +5,7 @@ These features are **not part of the MVP**. Do not implement them unless explici
 | Feature | Doc | Effort | Status |
 |---|---|---:|---|
 | Global search | [01-global-search.md](./01-global-search.md) | M | Not started |
-| Compare environments | [02-compare-environments.md](./02-compare-environments.md) | M | Not started |
+| Compare environments | [02-compare-environments.md](./02-compare-environments.md) | M | Implemented |
 | Auto-lock | [03-auto-lock.md](./03-auto-lock.md) | M | Not started |
 | Encrypted backup | [04-encrypted-backup.md](./04-encrypted-backup.md) | L | Not started |
 | Optional master password | [05-optional-master-password.md](./05-optional-master-password.md) | L | Not started |

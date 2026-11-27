@@ -375,6 +375,28 @@ pub fn get_variable_record(conn: &Connection, id: &str) -> AppResult<VariableRec
     .ok_or_else(|| AppError::NotFound("variable not found".into()))
 }
 
+pub fn list_variable_records(conn: &Connection, environment_id: &str) -> AppResult<Vec<VariableRecord>> {
+    ensure_environment_exists(conn, environment_id)?;
+    let mut stmt = conn.prepare(
+        "SELECT id, environment_id, key, value_encrypted, nonce, comment, position, created_at, updated_at
+         FROM variables WHERE environment_id = ?1 ORDER BY position ASC, key COLLATE NOCASE ASC",
+    )?;
+    let rows = stmt.query_map(params![environment_id], |row| {
+        Ok(VariableRecord {
+            id: row.get(0)?,
+            environment_id: row.get(1)?,
+            key: row.get(2)?,
+            value_encrypted: row.get(3)?,
+            nonce: row.get(4)?,
+            comment: row.get(5)?,
+            position: row.get(6)?,
+            created_at: row.get(7)?,
+            updated_at: row.get(8)?,
+        })
+    })?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+}
+
 pub fn create_variable(
     conn: &Connection,
     environment_id: &str,

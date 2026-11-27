@@ -64,3 +64,20 @@ export interface ImportPreviewRow {
 export interface ImportPreview {
   rows: ImportPreviewRow[];
 }
+
+export type CompareStatus = "only_left" | "only_right" | "same" | "different";
+
+export interface CompareRow {
+  key: string;
+  status: CompareStatus;
+  left_masked: string | null;
+  right_masked: string | null;
+  left_variable_id: string | null;
+  right_variable_id: string | null;
+}
+
+export interface EnvironmentComparison {
+  left_environment_id: string;
+  right_environment_id: string;
+  rows: CompareRow[];
+}
