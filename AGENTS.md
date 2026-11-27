@@ -23,7 +23,6 @@ Rules for AI coding agents working in EnvVault.
 
 - **Never log secret values, even in debug builds.** This includes env values, decrypted plaintext, encryption keys, nonces used as secret material context, and clipboard secrets.
 - Do not store secrets in `localStorage`, `sessionStorage`, or frontend state longer than needed.
-- Exported `.env` files must get `0600` permissions on Unix.
 - If a security decision is ambiguous, ask before proceeding.
 
 ## Development

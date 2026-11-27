@@ -18,7 +18,7 @@ EnvVault uses a sharp, flat, technical, monochrome visual language. Reference po
 ## Layout
 
 - Two panes: fixed ~260px sidebar (project > environments) separated by a 1px border from main panel.
-- Main header: breadcrumb (`project / environment`), variable count, actions (Import, Copy as .env, Export).
+- Main header: breadcrumb (`project / environment`), variable count, actions (Import, Copy as .env).
 - Variable table columns: Key (mono) | Value (mono, masked `••••••••`) | Comment | Actions (reveal, copy, delete). Inline editing on click.
 - Empty states: short muted text, one primary button, keyboard hint.
 - Dialogs: square, 1px border, plain dimmed backdrop (no blur).

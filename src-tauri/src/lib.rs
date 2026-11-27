@@ -47,7 +47,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_data_dir = app
                 .path()
@@ -102,7 +101,6 @@ pub fn run() {
             commands::preview_env_import,
             commands::import_env_text,
             commands::export_env_text,
-            commands::export_env_file,
             commands::compare_environments,
         ])
         .run(tauri::generate_context!())

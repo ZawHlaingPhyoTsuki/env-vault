@@ -6,7 +6,7 @@
 - **Fix:** Do not send `value` in the preview response. Remove preview reveal, or add a separate per-row reveal command. Keep preview masked with no plaintext in the normal payload.
 - **If skipped:** Secrets cross the app boundary more often than needed; any future weaker CSP/webview bug can expose pasted secrets.
 
-## 2. [Must fix] Export writes a secret file that is briefly readable by others
+## 2. [Resolved by removing the feature] Export writes a secret file that is briefly readable by others
 - **Where:** `src-tauri/src/commands.rs` (`export_env_file`)
 - **Problem:** On Unix, the file is written first, then chmodded to `0600`. Between write and chmod, default umask may make it readable by other users.
 - **Fix:** Create the file with owner-only mode from the start using `OpenOptions` with `mode(0o600)`, then write content.
@@ -18,7 +18,7 @@
 - **Fix:** Wrap the whole operation in one transaction; pass `&tx` through create/copy and commit once.
 - **If skipped:** Disk/DB errors can leave incomplete duplicates that look trustworthy.
 
-## 4. [Should fix] Export command accepts any file path from the screen code
+## 4. [Resolved by removing the feature] Export command accepts any file path from the screen code
 - **Where:** `src-tauri/src/commands.rs` (`export_env_file`), `src-tauri/src/lib.rs` command registration
 - **Problem:** Command writes to any frontend-supplied path. Tauri custom commands are not fs-scoped by default; this is a dangerous write primitive if webview is compromised.
 - **Fix:** Move save-dialog+write into a single Rust command that owns the chosen path, or avoid raw path-write command.

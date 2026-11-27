@@ -10,7 +10,7 @@ EnvVault is a local-first desktop app for storing `.env` values in an encrypted 
 
 - **Casual disk access / DB leakage:** variable values are encrypted at rest in SQLite using AES-256-GCM. A copied `envvault.db` file does not expose secret values without the master key.
 - **Backups leaking the DB file:** backups or copies of the database file remain encrypted at the value level.
-- **Accidental UI exposure:** values are masked by default in list views; reveal/copy/export are explicit user actions.
+- **Accidental UI exposure:** values are masked by default in list views; reveal/copy are explicit user actions.
 
 ### Does not protect against
 
@@ -24,14 +24,13 @@ EnvVault is a local-first desktop app for storing `.env` values in an encrypted 
 - **Master key:** 32 random bytes generated on first launch, stored in OS keychain (service `envvault`, account `master-key`; debug builds use `envvault-dev`). Key material is wrapped in `zeroize` where practical.
 - **Value encryption:** each value encrypted with AES-256-GCM and a fresh random 96-bit nonce. Ciphertext and nonce are stored per variable.
 - **Key lifecycle:** on startup, app loads key from OS keychain. If the key is missing/unavailable while encrypted data exists, the app shows a clear error and **does not** generate a new key.
-- **Plaintext boundary:** decrypted values are returned to frontend only for explicit reveal/copy/export/import-preview verification flows. List commands return masked placeholders.
+- **Plaintext boundary:** decrypted values are returned to frontend only for explicit reveal/copy/import-preview verification flows. List commands return masked placeholders.
 
 ## Tauri hardening
 
 - **CSP:** strict CSP in `src-tauri/tauri.conf.json`; no remote script origins; connect limited to Tauri IPC.
-- **Capabilities:** minimal permissions only - `core:default`, `clipboard-manager:allow-read-text`, `clipboard-manager:allow-write-text`, `dialog:allow-save`. No broad filesystem scope.
+- **Capabilities:** minimal permissions only - `core:default`, `clipboard-manager:allow-read-text`, `clipboard-manager:allow-write-text`. No broad filesystem scope.
 - **No network features:** no telemetry, analytics, auto-update, or remote scripts. App is intended to work fully offline.
-- **Exports:** `.env` export files are written by Rust and set to `0600` permissions on Unix.
 
 ## Logging and data handling
 

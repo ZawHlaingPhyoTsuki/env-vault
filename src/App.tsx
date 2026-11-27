@@ -1,7 +1,6 @@
 import * as React from "react";
-import { AlertTriangle, ArrowLeftRight, Copy, Download, Upload } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Copy, Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { save } from "@tauri-apps/plugin-dialog";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast, Toaster } from "sonner";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -52,19 +51,6 @@ function App() {
           if (current === text) await writeText("");
         } catch { /* ignore */ }
       }, 30000);
-    } catch (e) { toast.error(String(e)); }
-  };
-
-  const exportAsEnv = async () => {
-    if (!selectedEnvironmentId || !selectedEnvironment) return;
-    try {
-      const path = await save({
-        defaultPath: `${selectedEnvironment.name}.env`,
-        filters: [{ name: "Env", extensions: ["env"] }],
-      });
-      if (!path) return;
-      await api.exportEnvFile(selectedEnvironmentId, path);
-      toast.success("Exported .env file");
     } catch (e) { toast.error(String(e)); }
   };
 
@@ -130,7 +116,6 @@ function App() {
                 <Button size="sm" variant="secondary" onClick={() => setCompareOpen(true)}><ArrowLeftRight size={16} strokeWidth={1.5} /> Compare</Button>
                 <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}><Upload size={16} strokeWidth={1.5} /> Import</Button>
                 <Button size="sm" variant="secondary" onClick={() => void copyAsEnv()}><Copy size={16} strokeWidth={1.5} /> Copy as .env</Button>
-                <Button size="sm" variant="secondary" onClick={() => void exportAsEnv()}><Download size={16} strokeWidth={1.5} /> Export</Button>
               </>
             )}
             {!selectedEnvironment && selectedProject && (

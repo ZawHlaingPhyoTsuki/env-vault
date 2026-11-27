@@ -7,7 +7,7 @@ EnvVault does **not** sync with your project folders. Workflow:
 1. Create a project in the app.
 2. Create environments inside it (`dev`, `stage`, `prod`, or custom).
 3. Paste `.env` contents into an environment; EnvVault parses key/value rows.
-4. Copy back as `.env` text or export as a `.env` file when needed.
+4. Copy back as `.env` text when needed.
 
 ## Screenshots
 

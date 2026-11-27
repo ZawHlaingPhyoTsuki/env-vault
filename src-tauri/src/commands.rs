@@ -322,19 +322,6 @@ pub fn export_env_text(state: State<'_, AppState>, environment_id: String) -> Ap
 }
 
 #[tauri::command]
-pub fn export_env_file(state: State<'_, AppState>, environment_id: String, path: String) -> AppResult<()> {
-    let content = export_env_text(state, environment_id)?;
-    std::fs::write(&path, content).map_err(|e| AppError::InvalidState(format!("Failed to write file: {e}")))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
-            .map_err(|e| AppError::InvalidState(format!("Failed to set file permissions: {e}")))?;
-    }
-    Ok(())
-}
-
-#[tauri::command]
 pub fn compare_environments(
     state: State<'_, AppState>,
     left_environment_id: String,

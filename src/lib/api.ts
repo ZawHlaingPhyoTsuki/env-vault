@@ -66,8 +66,6 @@ export const api = {
     invoke<number>("import_env_text", { environmentId, text }),
   exportEnvText: (environmentId: string) =>
     invoke<string>("export_env_text", { environmentId }),
-  exportEnvFile: (environmentId: string, path: string) =>
-    invoke<void>("export_env_file", { environmentId, path }),
   compareEnvironments: (leftEnvironmentId: string, rightEnvironmentId: string) =>
     invoke<EnvironmentComparison>("compare_environments", {
       leftEnvironmentId,

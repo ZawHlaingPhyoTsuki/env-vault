@@ -59,7 +59,7 @@ meta         (key TEXT PK, value TEXT)
 2. **Key lookup:** `OsKeychain` reads master key from service `envvault`, account `master-key`.
 3. **First launch (no encrypted data):** generate random 32-byte key, store hex in OS keychain, keep key in memory (`Zeroizing`).
 4. **Existing encrypted data:** if key is missing/unavailable, set init error and **do not** generate a new key. UI shows vault initialization error.
-5. **Runtime use:** commands decrypt values only for explicit reveal/copy/export/import-related flows. List commands return masked placeholders.
+5. **Runtime use:** commands decrypt values only for explicit reveal/copy/export/import-related flows like reveal, copy, and import preview. List commands return masked placeholders.
 6. **Memory:** key/value plaintext is kept only as needed; key is wrapped in `Zeroizing`.
 
 **Dev/prod isolation:** debug builds (`pnpm tauri dev`) use `app_data_dir/dev/envvault.db` and keychain service `envvault-dev`; release builds use `app_data_dir/envvault.db` and service `envvault`. This prevents dev testing from touching the installed app vault.
@@ -87,11 +87,10 @@ meta         (key TEXT PK, value TEXT)
 | `preview_env_import` | Parse `.env` text and return masked preview/status rows |
 | `import_env_text` | Parse/encrypt/import `.env` text transactionally |
 | `export_env_text` | Decrypt and serialize environment as `.env` text |
-| `export_env_file` | Write `.env` export to selected path (`0600` on Unix) |
 
 ## Security boundaries
 
 - Frontend never receives master key.
-- Decrypted values cross boundary only for explicit reveal/copy/export/import-preview verification.
+- Decrypted values cross boundary only for explicit reveal/copy/import-preview verification.
 - Tauri capabilities are minimal (clipboard read/write, dialog save). No broad fs scope.
 - Strict CSP; no remote scripts/network calls.
