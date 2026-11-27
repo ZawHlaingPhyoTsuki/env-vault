@@ -280,8 +280,9 @@ pub fn delete_environment(conn: &Connection, id: &str) -> AppResult<()> {
 
 pub fn duplicate_environment(conn: &Connection, source_id: &str, new_name: &str) -> AppResult<Environment> {
     let source = get_environment(conn, source_id)?;
-    let target = create_environment(conn, &source.project_id, new_name)?;
-    let mut stmt = conn.prepare(
+    let tx = conn.unchecked_transaction()?;
+    let target = create_environment(&tx, &source.project_id, new_name)?;
+    let mut stmt = tx.prepare(
         "SELECT key, value_encrypted, nonce, comment, position, created_at, updated_at
          FROM variables WHERE environment_id = ?1 ORDER BY position ASC",
     )?;
@@ -293,12 +294,15 @@ pub fn duplicate_environment(conn: &Connection, source_id: &str, new_name: &str)
         let nonce: Vec<u8> = row.get(2)?;
         let comment: Option<String> = row.get(3)?;
         let position: i64 = row.get(4)?;
-        conn.execute(
+        tx.execute(
             "INSERT INTO variables (id, environment_id, key, value_encrypted, nonce, comment, position, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![new_id(), target.id, key, value_encrypted, nonce, comment, position, ts, ts],
         )?;
     }
+    drop(rows);
+    drop(stmt);
+    tx.commit()?;
     Ok(target)
 }
 

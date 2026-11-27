@@ -12,7 +12,7 @@
 - **Fix:** Create the file with owner-only mode from the start using `OpenOptions` with `mode(0o600)`, then write content.
 - **If skipped:** On shared machines with normal umask, exported secrets can be read during the short window.
 
-## 3. [Should fix] Duplicating an environment can leave a half-copied result
+## 3. [Fixed] Duplicating an environment can leave a half-copied result
 - **Where:** `src-tauri/src/db.rs` (`duplicate_environment`)
 - **Problem:** Creates target environment then inserts variables one by one with no transaction. A mid-loop failure leaves a partially copied environment.
 - **Fix:** Wrap the whole operation in one transaction; pass `&tx` through create/copy and commit once.
@@ -24,7 +24,7 @@
 - **Fix:** Move save-dialog+write into a single Rust command that owns the chosen path, or avoid raw path-write command.
 - **If skipped:** A compromised webview could overwrite user-writable files with secret content.
 
-## 5. [Should fix] Compare has no test that would catch a wrong result
+## 5. [Fixed] Compare has no test that would catch a wrong result
 - **Where:** `src-tauri/src/commands.rs` (`compare_environments`)
 - **Problem:** Compare decrypts and classifies secrets, but there are no tests for compare behavior or masked-only output.
 - **Fix:** Add one Rust test covering same/different/only-left/only-right and asserting no plaintext in response.

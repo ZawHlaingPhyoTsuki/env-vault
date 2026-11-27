@@ -321,21 +321,19 @@ pub fn export_env_text(state: State<'_, AppState>, environment_id: String) -> Ap
     Ok(parser::serialize_env(&vars))
 }
 
-#[tauri::command]
-pub fn compare_environments(
-    state: State<'_, AppState>,
-    left_environment_id: String,
-    right_environment_id: String,
+fn compare_environments_impl(
+    master: &MasterKey,
+    conn: &Connection,
+    left_environment_id: &str,
+    right_environment_id: &str,
 ) -> AppResult<EnvironmentComparison> {
     if left_environment_id == right_environment_id {
         return Err(AppError::Validation(
             "select two different environments to compare".into(),
         ));
     }
-    let master = state.ready_key()?;
-    let conn = state.conn()?;
-    let left = db::list_variable_records(&conn, &left_environment_id)?;
-    let right = db::list_variable_records(&conn, &right_environment_id)?;
+    let left = db::list_variable_records(conn, left_environment_id)?;
+    let right = db::list_variable_records(conn, right_environment_id)?;
     let crypto = Aes256GcmCrypto;
 
     let decrypt = |rec: &crate::db::VariableRecord| -> AppResult<Vec<u8>> {
@@ -344,7 +342,7 @@ pub fn compare_environments(
             .as_slice()
             .try_into()
             .map_err(|_| AppError::Crypto("invalid nonce length".into()))?;
-        crypto.decrypt(&master, &rec.value_encrypted, &nonce)
+        crypto.decrypt(master, &rec.value_encrypted, &nonce)
     };
     let mask = |rec: &crate::db::VariableRecord| -> String {
         if rec.value_encrypted.is_empty() {
@@ -405,8 +403,70 @@ pub fn compare_environments(
     rows.sort_by(|a, b| a.key.to_lowercase().cmp(&b.key.to_lowercase()).then(a.key.cmp(&b.key)));
 
     Ok(EnvironmentComparison {
-        left_environment_id,
-        right_environment_id,
+        left_environment_id: left_environment_id.to_string(),
+        right_environment_id: right_environment_id.to_string(),
         rows,
     })
+}
+
+#[tauri::command]
+pub fn compare_environments(
+    state: State<'_, AppState>,
+    left_environment_id: String,
+    right_environment_id: String,
+) -> AppResult<EnvironmentComparison> {
+    let master = state.ready_key()?;
+    let conn = state.conn()?;
+    compare_environments_impl(&master, &conn, &left_environment_id, &right_environment_id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crypto::{generate_master_key, Aes256GcmCrypto, ValueCrypto};
+
+    #[test]
+    fn compare_environments_reports_statuses_without_plaintext() {
+        let conn = db::open_in_memory().unwrap();
+        let project = db::create_project(&conn, "P").unwrap();
+        let left = db::create_environment(&conn, &project.id, "dev").unwrap();
+        let right = db::create_environment(&conn, &project.id, "prod").unwrap();
+        let key = generate_master_key();
+        let crypto = Aes256GcmCrypto;
+
+        let secret_same = "same-secret";
+        let secret_left = "left-only-secret";
+        let secret_right = "right-only-secret";
+        let secret_diff_l = "left-diff-secret";
+        let secret_diff_r = "right-diff-secret";
+
+        let (ct, nonce) = crypto.encrypt(&key, secret_same.as_bytes()).unwrap();
+        db::create_variable(&conn, &left.id, "SAME", &ct, &nonce, None, None).unwrap();
+        db::create_variable(&conn, &right.id, "SAME", &ct, &nonce, None, None).unwrap();
+
+        let (ct, nonce) = crypto.encrypt(&key, secret_diff_l.as_bytes()).unwrap();
+        db::create_variable(&conn, &left.id, "DIFF", &ct, &nonce, None, None).unwrap();
+        let (ct, nonce) = crypto.encrypt(&key, secret_diff_r.as_bytes()).unwrap();
+        db::create_variable(&conn, &right.id, "DIFF", &ct, &nonce, None, None).unwrap();
+
+        let (ct, nonce) = crypto.encrypt(&key, secret_left.as_bytes()).unwrap();
+        db::create_variable(&conn, &left.id, "LEFT_ONLY", &ct, &nonce, None, None).unwrap();
+
+        let (ct, nonce) = crypto.encrypt(&key, secret_right.as_bytes()).unwrap();
+        db::create_variable(&conn, &right.id, "RIGHT_ONLY", &ct, &nonce, None, None).unwrap();
+
+        let result = compare_environments_impl(&key, &conn, &left.id, &right.id).unwrap();
+        assert_eq!(result.rows.len(), 4);
+
+        let row = |k: &str| result.rows.iter().find(|r| r.key == k).unwrap();
+        assert_eq!(row("SAME").status, CompareStatus::Same);
+        assert_eq!(row("DIFF").status, CompareStatus::Different);
+        assert_eq!(row("LEFT_ONLY").status, CompareStatus::OnlyLeft);
+        assert_eq!(row("RIGHT_ONLY").status, CompareStatus::OnlyRight);
+
+        let json = serde_json::to_string(&result).unwrap();
+        for secret in [secret_same, secret_left, secret_right, secret_diff_l, secret_diff_r] {
+            assert!(!json.contains(secret), "plaintext leaked in compare result");
+        }
+    }
 }
