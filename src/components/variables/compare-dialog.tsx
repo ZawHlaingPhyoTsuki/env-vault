@@ -87,6 +87,7 @@ export function CompareDialog({ open, onOpenChange, currentEnvironmentId, enviro
   const visible = missingOnly ? rows.filter((r) => r.status === "only_left") : rows;
   const leftName = environments.find((e) => e.id === leftId)?.name ?? "A";
   const rightName = environments.find((e) => e.id === rightId)?.name ?? "B";
+  const envItems = environments.map((e) => ({ value: e.id, label: e.name }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Compare environments" description="Compare keys and values across two environments. Values are masked by default." className="max-w-5xl">
@@ -94,7 +95,7 @@ export function CompareDialog({ open, onOpenChange, currentEnvironmentId, enviro
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1 text-[12px] text-muted-foreground">
             <span className="uppercase tracking-[0.04em]">Env A</span>
-            <Select value={leftId} onValueChange={(v) => setLeftId(v ?? "")}>
+            <Select value={leftId} onValueChange={(v) => setLeftId(v ?? "")} items={envItems}>
               <SelectTrigger className="w-[180px] font-mono">
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
@@ -105,7 +106,7 @@ export function CompareDialog({ open, onOpenChange, currentEnvironmentId, enviro
           </label>
           <label className="flex flex-col gap-1 text-[12px] text-muted-foreground">
             <span className="uppercase tracking-[0.04em]">Env B</span>
-            <Select value={rightId} onValueChange={(v) => setRightId(v ?? "")}>
+            <Select value={rightId} onValueChange={(v) => setRightId(v ?? "")} items={envItems}>
               <SelectTrigger className="w-[180px] font-mono">
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
